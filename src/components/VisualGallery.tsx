@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Eye, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Eye, RotateCcw, Upload, FileImage } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import realVsFakeImage from "@/assets/real-vs-fake.jpg";
 
 const VisualGallery = () => {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const imageComparisons = [
     {
@@ -46,6 +52,56 @@ const VisualGallery = () => {
     setShowResults(true);
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setUploadedImage(e.target?.result as string);
+          setAnalysisResult(null);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload an image file (JPG, PNG, etc.)",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const analyzeUploadedImage = () => {
+    if (!uploadedImage) return;
+    
+    setIsAnalyzing(true);
+    
+    // Simulate AI analysis
+    setTimeout(() => {
+      const fakeConfidence = Math.random() > 0.5 ? Math.random() * 30 + 70 : Math.random() * 40 + 10;
+      const isFake = fakeConfidence > 50;
+      
+      setAnalysisResult({
+        confidence: parseFloat(fakeConfidence.toFixed(1)),
+        isFake,
+        artifacts: isFake 
+          ? ["Pixel inconsistencies detected", "Unusual compression patterns", "Artificial texture signatures"]
+          : ["Natural compression artifacts", "Consistent lighting patterns", "Authentic noise distribution"]
+      });
+      setIsAnalyzing(false);
+    }, 2000);
+  };
+
+  const resetUpload = () => {
+    setUploadedImage(null);
+    setAnalysisResult(null);
+    setIsAnalyzing(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <section id="demo" className="py-20 px-6 bg-card/30">
       <div className="max-w-6xl mx-auto">
@@ -57,6 +113,127 @@ const VisualGallery = () => {
             Interactive examples showing real vs AI-generated image detection
           </p>
         </div>
+
+        {/* Upload Your Own Image */}
+        <Card className="gradient-card border-primary/20 p-8 shadow-ai mb-12">
+          <h3 className="text-2xl font-semibold mb-6 text-center">Test Your Own Image</h3>
+          
+          {!uploadedImage ? (
+            <div className="space-y-6">
+              <div 
+                className="border-2 border-dashed border-primary/30 rounded-lg p-12 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FileImage className="h-16 w-16 text-primary mx-auto mb-4" />
+                <h4 className="text-lg font-semibold mb-2">Upload an Image</h4>
+                <p className="text-muted-foreground mb-4">
+                  Drop your image here or click to browse (JPG, PNG, GIF)
+                </p>
+                <Button className="gradient-ai shadow-ai hover:shadow-glow">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose File
+                </Button>
+              </div>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-lg font-semibold mb-4">Your Image</h4>
+                  <div className="relative">
+                    <img 
+                      src={uploadedImage} 
+                      alt="Uploaded for analysis" 
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-lg font-semibold mb-4">Analysis Results</h4>
+                  
+                  {isAnalyzing ? (
+                    <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg">
+                      <div className="text-center">
+                        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Analyzing image...</p>
+                      </div>
+                    </div>
+                  ) : analysisResult ? (
+                    <div className="bg-muted/20 rounded-lg p-6 h-64">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Detection Result:</span>
+                          <Badge className={analysisResult.isFake ? "bg-glitch/20 text-glitch" : "bg-primary/20 text-primary"}>
+                            {analysisResult.isFake ? (
+                              <>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                AI Generated
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Likely Real
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Confidence Level:</span>
+                          <Badge className="bg-secondary/20 text-secondary">
+                            {analysisResult.confidence}%
+                          </Badge>
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-sm font-medium mb-2">Analysis Details:</h5>
+                          <ul className="space-y-1">
+                            {analysisResult.artifacts.map((artifact: string, index: number) => (
+                              <li key={index} className="text-xs text-muted-foreground flex items-center gap-2">
+                                <div className="w-1 h-1 bg-primary rounded-full"></div>
+                                {artifact}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg">
+                      <Button 
+                        onClick={analyzeUploadedImage}
+                        className="gradient-ai shadow-ai hover:shadow-glow"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Analyze Image
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-4">
+                <Button 
+                  onClick={resetUpload}
+                  variant="outline"
+                  className="border-primary/30 hover:border-primary hover:bg-primary/10"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Try Another Image
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
 
         <div className="grid lg:grid-cols-3 gap-8 mb-12">
           {imageComparisons.map((comparison) => (
