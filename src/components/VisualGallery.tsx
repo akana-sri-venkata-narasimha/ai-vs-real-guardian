@@ -79,11 +79,13 @@ const VisualGallery = () => {
     
     // Simulate AI analysis
     setTimeout(() => {
-      const fakeConfidence = Math.random() > 0.5 ? Math.random() * 30 + 70 : Math.random() * 40 + 10;
-      const isFake = fakeConfidence > 50;
+      const aiConfidence = Math.random() * 100;
+      const realConfidence = 100 - aiConfidence;
+      const isFake = aiConfidence > realConfidence;
       
       setAnalysisResult({
-        confidence: parseFloat(fakeConfidence.toFixed(1)),
+        aiConfidence: parseFloat(aiConfidence.toFixed(1)),
+        realConfidence: parseFloat(realConfidence.toFixed(1)),
         isFake,
         artifacts: isFake 
           ? ["Pixel inconsistencies detected", "Unusual compression patterns", "Artificial texture signatures"]
@@ -187,11 +189,19 @@ const VisualGallery = () => {
                           </Badge>
                         </div>
                         
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Confidence Level:</span>
-                          <Badge className="bg-secondary/20 text-secondary">
-                            {analysisResult.confidence}%
-                          </Badge>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">AI Generated:</span>
+                            <Badge className="bg-glitch/20 text-glitch">
+                              {analysisResult.aiConfidence}%
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Real Image:</span>
+                            <Badge className="bg-primary/20 text-primary">
+                              {analysisResult.realConfidence}%
+                            </Badge>
+                          </div>
                         </div>
                         
                         <div>
